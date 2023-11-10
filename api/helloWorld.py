@@ -7,13 +7,13 @@ headers = {
     "Content-Type": "application/json;charset=utf-8"
 }
 
-# if POST method get body from argv
-payload = ""
+# if POST method get request body from argv
+payload = "hello World!"
 if len(sys.argv) > 1:
     payload = sys.argv[1]
 
 
-data = {
+msg = {
     "key": payload
 }
 
@@ -21,8 +21,7 @@ response = {
     "code": code,
     "status": status,
     "headers": headers,
-    "data": json.dumps(data)
+    "data": json.dumps(msg)
 }
-
 
 print(json.dumps(response))

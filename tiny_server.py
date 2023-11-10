@@ -7,21 +7,25 @@ import sys
 import json
 import time
 
-def implemented(client_socket, request_data):
+
+def implemented(client, request_data):
     request_method = method(request_data)
     if not request_method == 'GET':
         if not request_method == 'POST':
-            message(client_socket, '405', 'Method Not Allowed', "only GET and POST was permitted", headers={})
+            message(client, '405', 'Method Not Allowed', "only GET and POST was permitted", headers={})
             return False
     return True
+
 
 def method(request_data):
     data = str(request_data, encoding="utf-8").split(' ')
     return data[0]
 
+
 def path(request_data):
     data = str(request_data, encoding="utf-8").split(' ')
     return data[1]
+
 
 def body(request_data):
     data = str(request_data, encoding="utf-8").split('\r\n\r\n')
@@ -30,27 +34,25 @@ def body(request_data):
     return json.dumps(data)
 
 
-
-
-def message(client_socket, status_code, status, msg, headers):
+def message(client, status_code, status, msg, headers):
     # create response data
     response_start_line = "HTTP/1.1 "+str(status_code)+" "+str(status)+"\r\n"
     response_headers = "Server: mini server\r\n"
     for key in headers:
         response_headers = response_headers + key+":"+" "+headers[key]+"\r\n"
     response_body = msg
-    response = str(response_start_line) + str(response_headers) + str("\r\n") + str(response_body)
+    response = str(response_start_line) + str(response_headers) + str("\r\n") + str(response_body) + str("\r\n")
 
     # send response data
     local_time = str(time.ctime())
     print(local_time + " response data:\n", response, "\n\n\n")
-    client_socket.send(bytes(response, "utf-8"))
+    client.sendall(bytes(response, "utf-8"))
 
-    client_socket.close()
+    client.close()
 
 
-def handle_client(client_socket):
-    request_data = client_socket.recv(1024)
+def handle_client(client):
+    request_data = client.recv(1024)
     request_method = method(request_data)
     request_payload = ""
     if request_method == "POST":
@@ -58,7 +60,7 @@ def handle_client(client_socket):
         request_payload = " " + request_body
     local_time = str(time.ctime())
     print(local_time + " request data:", request_data)
-    if not implemented(client_socket, request_data):
+    if not implemented(client, request_data):
         return
     script = path(request_data)[1:]
     # execute python3 script
@@ -72,12 +74,13 @@ def handle_client(client_socket):
             msg[i] = str(msg[i], encoding="utf-8")
         try:
             response = json.loads(str(''.join(msg)))
-        except :
-            message(client_socket, 500, "Internal Server Error", "script Error or Nothing was return from script",
+        except:
+            message(client, 500, "Internal Server Error", "script Error or Nothing was return from script",
                     headers={})
             return
-    message(client_socket, response["code"], response["status"], response["data"], response["headers"])
+    message(client, response["code"], response["status"], response["data"], response["headers"])
     return
+
 
 if __name__ == "__main__":
     listen_address = str(sys.argv[1])
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     print("start server...")
     while True:
         client_socket, client_address = server_socket.accept()
-        print("[%s, %s]request:" % client_address)
+        print("[%s]request:", client_address)
         handle_client_process = Process(target=handle_client, args=(client_socket,))
         handle_client_process.start()
         client_socket.close()
